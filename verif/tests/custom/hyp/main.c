@@ -11,6 +11,24 @@ typedef unsigned long uint64_t;
 #define HSTATUS_SPV 7
 #define SSTATUS_SPP 8
 
+#define PTE_V 0x1
+#define PTE_R 0x2
+#define PTE_W 0x4
+#define PTE_X 0x8
+#define PTE_U 0x10
+#define PTE_A 0x40
+#define PTE_D 0x80
+
+#define L3_PAGETABLE 0x80010000
+#define L2_PAGETABLE 0x80011000
+#define L1_PAGETABLE 0x80012000
+
+#define VM_L3_PAGETABLE 0x80013000
+#define VM_L2_PAGETABLE 0x80014000
+#define VM_L1_PAGETABLE 0x80015000
+
+#define MMU_EN 0x8000000000000000
+
 void init_pmp() {
   //S-mode can access 0x00000000 ~ 0xffffffff range
   asm volatile("li    t0      , 0x0000001f");
@@ -47,12 +65,71 @@ void enter_vsmode() {
   return;
 }
 
+void init_g_stage_pagetable() {
+  uint64_t hgatp;
+  uint64_t *pte;
+
+  // Direct Mapping 0x80000000 ~ 0x80030000
+  hgatp = L3_PAGETABLE >> 12;
+
+  pte = L3_PAGETABLE | ((0x80000000 >> 30) << 3);
+  *pte = ((L2_PAGETABLE >> 12) << 10) | PTE_V;
+
+  pte = L2_PAGETABLE | ((0x80000000 & 0x3fe00000) >> 21) << 3;
+  *pte = ((L1_PAGETABLE >> 12) << 10) | PTE_V;
+
+  for(int i = 0; i < 0x31; i++) {
+    pte = L1_PAGETABLE | (((0x80000000 + (i * 0x1000)) & 0x1ff000) >> 12) << 3;
+    *pte = (((0x80000000 + (i * 0x1000)) >> 12) << 10) | PTE_V | PTE_R | PTE_W | PTE_X | PTE_U | PTE_A | PTE_D;
+  }
+
+  // activate MMU
+  hgatp |= MMU_EN;
+  asm volatile("csrw hgatp, %0" : : "r" (hgatp));
+  asm volatile("sfence.vma zero, zero");
+
+  return;
+}
+
+void init_vs_stage_pagetable() {
+  uint64_t vsatp;
+  uint64_t *pte;
+
+  // Direct Mapping 0x80000000 ~ 0x80030000
+  vsatp = VM_L3_PAGETABLE >> 12;
+
+  pte = VM_L3_PAGETABLE | ((0x80000000 >> 30) << 3);
+  *pte = ((VM_L2_PAGETABLE >> 12) << 10) | PTE_V;
+
+  pte = VM_L2_PAGETABLE | ((0x80000000 & 0x3fe00000) >> 21) << 3;
+  *pte = ((VM_L1_PAGETABLE >> 12) << 10) | PTE_V;
+
+  for(int i = 0; i < 0x31; i++) {
+    pte = VM_L1_PAGETABLE | (((0x80000000 + (i * 0x1000)) & 0x1ff000) >> 12) << 3;
+    *pte = (((0x80000000 + (i * 0x1000)) >> 12) << 10) | PTE_V | PTE_R | PTE_W | PTE_X | PTE_A | PTE_D;
+  }
+
+  vsatp |= MMU_EN;
+  asm volatile("csrw satp, %0" : : "r" (vsatp));
+  asm volatile("sfence.vma zero, zero");
+
+  return;
+}
+
+
 int main() {
   init_pmp();
 
   enter_hsmode();
 
+  init_g_stage_pagetable();
+
   enter_vsmode();
+
+  init_vs_stage_pagetable();
+
+  uint64_t x;
+  x = 0x114514;
 
   return 0;
 }
