@@ -44,8 +44,10 @@ CC_OPTS="-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -g 
 cd verif/sim/
 make -C ../.. clean
 make clean_all
-python3 cva6.py --c_tests ../tests/custom/hyp/main.c --iss_yaml cva6.yaml --target cv64a6_imafdch_sv39 --iss=$DV_SIMULATORS --linker=../../config/gen_from_riscv_config/linker/link.ld --gcc_opts="$CC_OPTS" $DV_OPTS
-#make -C ../.. clean
-#make clean_all
+#python3 cva6.py --c_tests ../tests/custom/hyp/vs_g_stage_translation.c --iss_yaml cva6.yaml --target cv64a6_imafdch_sv39 --iss=$DV_SIMULATORS --linker=../../config/gen_from_riscv_config/linker/link.ld --gcc_opts="$CC_OPTS" $DV_OPTS
+python3 cva6.py --c_tests ../tests/custom/hyp/serial_access.c --iss_yaml cva6.yaml --target cv64a6_imafdch_sv39 --iss=$DV_SIMULATORS --linker=../../config/gen_from_riscv_config/linker/link.ld --gcc_opts="$CC_OPTS" $DV_OPTS
+#python3 cva6.py --c_tests ../tests/custom/hyp/page_alignment_access.c --iss_yaml cva6.yaml --target cv64a6_imafdch_sv39 --iss=$DV_SIMULATORS --linker=../../config/gen_from_riscv_config/linker/link.ld --gcc_opts="$CC_OPTS" $DV_OPTS
+make -C ../.. clean
+make clean_all
 
 cd -
