@@ -434,6 +434,8 @@ package riscv;
     CSR_HCONTEXT         = 12'h6A8,
     CSR_HTIMEDELTA       = 12'h605,
     CSR_HTIMEDELTAH      = 12'h615,
+    // Audit HW CSRs
+    CSR_ASATP            = 12'hA00,
     // Machine Mode CSRs
     CSR_MSTATUS          = 12'h300,
     CSR_MISA             = 12'h301,

@@ -124,6 +124,8 @@ module csr_regfile
     output logic [CVA6Cfg.PPNW-1:0] hgatp_ppn_o,
     // TO_BE_COMPLETED - EX_STAGE
     output logic [CVA6Cfg.VMID_WIDTH-1:0] vmid_o,
+    // TO_BE_COMPLETED - EX_STAGE
+    output logic [CVA6Cfg.PPNW-1:0] asatp_ppn_o,
     // external interrupt in - SUBSYSTEM
     input logic [1:0] irq_i,
     // inter processor interrupt -> connected to machine mode sw - SUBSYSTEM
@@ -216,6 +218,7 @@ module csr_regfile
   satp_t satp_q, satp_d;
   satp_t vsatp_q, vsatp_d;
   hgatp_t hgatp_q, hgatp_d;
+  satp_t asatp_q, asatp_d;
   riscv::dcsr_t dcsr_q, dcsr_d;
   riscv::csr_t csr_addr;
   riscv::csr_t conv_csr_addr;
@@ -868,6 +871,7 @@ module csr_regfile
     automatic satp_t satp;
     automatic satp_t vsatp;
     automatic hgatp_t hgatp;
+    automatic asatp_t asatp;
     automatic logic [63:0] instret;
 
     if (CVA6Cfg.RVS) begin
@@ -876,6 +880,9 @@ module csr_regfile
     if (CVA6Cfg.RVH) begin
       hgatp = hgatp_q;
       vsatp = vsatp_q;
+    end
+    if (CVA6Cfg.AUDIT) begin
+      asatp = asatp_q;
     end
     instret         = instret_q;
 
@@ -1336,6 +1343,17 @@ module csr_regfile
         riscv::CSR_HENVCFG:
         if (CVA6Cfg.RVH) fiom_d = csr_wdata[0];
         else update_access_exception = 1'b1;
+        // Audit HW registers
+        riscv::CSR_ASATP: begin
+          if (CVA6Cfg.AUDIT) begin
+            if (priv_lvl_o == riscv::PRIV_LVL_M) begin
+              asatp = asatp_t'(csr_wdata);
+              asatp_d = asatp;
+            end else begin
+              update_access_exception = 1'b1;
+            end
+          end
+        end
         riscv::CSR_MSTATUS: begin
           mstatus_d    = {{64 - CVA6Cfg.XLEN{1'b0}}, csr_wdata};
           mstatus_d.xs = riscv::Off;
@@ -2456,6 +2474,7 @@ module csr_regfile
   assign satp_ppn_o = CVA6Cfg.RVS ? satp_q.ppn : '0;
   assign vsatp_ppn_o = CVA6Cfg.RVH ? vsatp_q.ppn : '0;
   assign hgatp_ppn_o = CVA6Cfg.RVH ? hgatp_q.ppn : '0;
+  assign asatp_ppn_o = CVA6Cfg.AUDIT ? asatp_q.ppn : '0;
   if (CVA6Cfg.RVS) begin
     assign asid_o = satp_q.asid[CVA6Cfg.ASID_WIDTH-1:0];
   end else begin
@@ -2580,6 +2599,10 @@ module csr_regfile
         vsatp_q                  <= {CVA6Cfg.XLEN{1'b0}};
         en_ld_st_g_translation_q <= 1'b0;
       end
+
+      if (CVA6Cfg.AUDIT) begin
+        asatp_q                  <= {CVA6Cfg.XLEN{1'b0}};
+      end
       // timer and counters
       cycle_q                <= 64'b0;
       instret_q              <= 64'b0;
@@ -2659,6 +2682,9 @@ module csr_regfile
         vstval_q                 <= vstval_d;
         vsatp_q                  <= vsatp_d;
         en_ld_st_g_translation_q <= en_ld_st_g_translation_d;
+      end
+      if (CVA6Cfg.AUDIT) begin
+        asatp_q                  <= asatp_d;
       end
       // timer and counters
       cycle_q                <= cycle_d;

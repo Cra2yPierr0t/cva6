@@ -62,6 +62,8 @@ package config_pkg;
     bit                          RVC;
     // Hypervisor RISC-V extension
     bit                          RVH;
+    // Audit HW extension
+    bit                          AUDIT;
     // Zcb RISC-V extension
     bit                          RVZCB;
     // Zcmp RISC-V extension
